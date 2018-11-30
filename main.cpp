@@ -1,4 +1,4 @@
-#include "Complex.h"
+//#include "Complex.h"
 
 #include <iostream>
 #include <windows.h>
@@ -6,10 +6,15 @@
 #include <GL/glut.h>
 #include <GL/GLAUX.H>
 
+const int	NumberOfIterations = 500,
+			radius = 16;
 
-GLuint	wHeight = 600, //window size
-		wWidth = 600;
-double x, y;
+int		wHeight = 600, //window size
+		wWidth = 800;
+
+float	scale = 180;
+
+double  x, y;
 
 void reshape(int w, int h)
 {
@@ -36,8 +41,8 @@ void display()
 		{
 			Complex z(0, 0);
 			int i = 0;
-			while (i < 500 && z.abs() < 16) {
-				z = z * z + Complex((x - 600) / 180.0, (y - 400) / 180.0);
+			while (i < NumberOfIterations && z.abs() < radius) {
+				z = z * z + Complex(((x - wWidth / 2) / scale), ((y - wHeight / 2) / scale));
 				i++;
 			}
 			double r = 0.1 + i * 0.03 * 0.2; //расчет 
