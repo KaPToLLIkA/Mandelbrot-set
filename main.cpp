@@ -3,19 +3,24 @@
 #include <mutex>
 #include <sstream>
 #include <fstream>
+#include <future>
+#include <ctime>
+#include <array>
+#include <codecvt>
+#include <filesystem>
 
 #include "imgui.h"
 #include "imgui-SFML.h"
 #include "mandelbrot_set.h"
+#include "portable-file-dialogs.h"
 
-#define IM_X 600
-#define IM_Y 600
-#define THREADS_COUNT 8
-#define NUMBER_OF_COLOR_POINTS 4
+#define IM_X 800
+#define IM_Y 800
+#define THREADS_COUNT 2
 
 
 
-#include "time_test.h"
+
 
 
 
@@ -23,34 +28,37 @@
 
 namespace params {
 
-	sf::Vector2u	main_window_size = { IM_X + 400, IM_Y },
+	
+	sf::Vector2u	main_window_size = { IM_X, IM_Y },
 					img_size = { IM_X, IM_Y },
-					render_size = { 150, 300 };
+					settings_window_size = {400, IM_Y};
 
 	sf::Vector2f	img_pos = { float(img_size.x >> 1), float(img_size.y >> 1) };
-													//x     y
-	std::vector <sf::Vector2u> render_positions = { { 0,	0 },
-													{ 150,	0 },
-													{ 300,	0 },
-													{ 450,	0 },
-													{ 0,	300 },
-													{ 150,	300 },
-													{ 300,	300 }, 
-													{ 450,	300 } };
-	int **koeffs = new int* [IM_Y];
-	
+												
 	double		scale = 1.0f,
 				radius = 8.0f,
 				delta_mx = 0.0f,
 				delta_my = 0.0f,
 				mx = Mandelbrot::countMx_My(0, main_window_size.x - 1, scale, delta_mx),
 				my = Mandelbrot::countMx_My(0, main_window_size.y - 1, scale, delta_my);
-	unsigned	number_of_iterations = NUMBER_OF_COLOR_POINTS * 12,
-				number_of_render_threads = THREADS_COUNT,
-				number_of_saved_img = 0;
 
-	std::vector <std::thread*> threads;
+
+	unsigned	number_of_color_points = 4,
+				number_of_iterations = number_of_color_points * 12,
+				number_of_render_threads = THREADS_COUNT,
+				number_of_saved_img = 0,
+				next_x = 0, 
+				next_y = 0;
+
+	bool settings_window_closed = true;
+	bool main_window_closed = false;
+	bool color_change = false;
+	bool frame_saved = false;
+	bool windows_magnet = false;
 	
+
+	std::vector<std::thread> threads;
+	std::thread *settings_thread;
 }
 
 
@@ -63,61 +71,113 @@ namespace params {
 
 
 
-
-Mandelbrot::MandelbrotSet set(params::img_size, params::img_pos, params::number_of_render_threads, NUMBER_OF_COLOR_POINTS);
+Mandelbrot::MandelbrotSet set(params::img_size, params::img_pos, params::number_of_render_threads, params::number_of_color_points);
 sf::RenderWindow main_window(sf::VideoMode(params::main_window_size.x, params::main_window_size.y), " ", sf::Style::Default);
+sf::RenderWindow settings_window;
 
-bool	should_generate_img = true;
 
 
-void mandelbrotSetRenderThread(unsigned);
+sf::Text iter_count;
+sf::Text scale;
+sf::Text info;
+sf::Text info1;
+sf::Text info2;
+sf::Font font;
+
+
+
+void updateScaleText();
+void updateIterationsText();
+void showSettings();
 void updateSprite();
+void drawColorPicker();
 void saveFrame();
-void createRenderThreads();
+void renderThread(unsigned id);
 
 
-int main() {
-	assert (!(NUMBER_OF_COLOR_POINTS < 4) && "NUMBER OF COLOR POINTS SHOULD BE GREATER THAN 3");
+std::string utf8_to_string(const char *utf8str, const std::locale& loc);
 
-	for (unsigned i = 0; i < IM_Y; ++i)
-		params::koeffs[i] = new int[IM_X];
+
+int main() 
+{
+	assert (!(params::number_of_color_points < 4) && "NUMBER OF COLOR POINTS SHOULD BE GREATER THAN 3");
+
+	
 	main_window.setVerticalSyncEnabled(true);
+	main_window.setFramerateLimit(60);
 	
 
-	set.color_point[0] = { (uint8_t)120, (uint8_t)240, (uint8_t)54, (uint8_t)255 };
-	set.color_point[1] = { (uint8_t)120, (uint8_t)135, (uint8_t)84, (uint8_t)189 };
-	set.color_point[2] = { (uint8_t)63, (uint8_t)240, (uint8_t)144, (uint8_t)215 };
-	set.color_point[3] = { (uint8_t)213, (uint8_t)22, (uint8_t)199, (uint8_t)15 };
-	
 
-	double s = getCPUTime();
 	set.createColorsTable(params::number_of_iterations);
-	double e = getCPUTime();
-	std::cout << e - s << std::endl;
 
-	createRenderThreads();
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	for (size_t i = 0; i < THREADS_COUNT; ++i)
+	{
+		try
+		{
+			params::threads.push_back(std::thread(renderThread, i));
+			params::threads[i].detach();
+		}
+		catch (std::system_error error)
+		{
+			std::cout << error.code();
+		}
+	}
+	
+	
 	
 
 
 
-	sf::Text text;
-	sf::Font font;
+	
 	font.loadFromFile("12144.ttf");
-	text.setFont(font);
-	text.setOrigin(0.0f, 0.0f);
-	text.setStyle(sf::Text::Style::Bold);
-	text.setFillColor(sf::Color::White);
-	text.setPosition(5.0f, 5.0f);
-	text.setCharacterSize(30);
+	iter_count.setFont(font);
+	iter_count.setOrigin(0.0f, 0.0f);
+	iter_count.setStyle(sf::Text::Style::Bold);
+	iter_count.setFillColor(sf::Color::White);
+	iter_count.setPosition(5.0f, 5.0f);
+	iter_count.setCharacterSize(20);
+
+	scale.setFont(font);
+	scale.setOrigin(0.0f, 0.0f);
+	scale.setStyle(sf::Text::Style::Bold);
+	scale.setFillColor(sf::Color::White);
+	scale.setPosition(250.0f, 5.0f);
+	scale.setCharacterSize(20);
+
+	
+	info.setFont(font);
+	info.setOrigin(0.0f, 0.0f);
+	info.setStyle(sf::Text::Style::Bold);
+	info.setFillColor(sf::Color::White);
+	info.setPosition(5.0f, IM_Y - 50.f);
+	info.setCharacterSize(20);
+	info.setString("S - save frame to jpg\n"
+				   "Arrows up and down - Detalization");
 
 
-	std::stringstream converter;
-	std::string text_string;
-	converter << params::number_of_iterations;
-	converter >> text_string;
-	converter.clear();
-	text.setString(text_string);
+	info1.setFont(font);
+	info1.setOrigin(0.0f, 0.0f);
+	info1.setStyle(sf::Text::Style::Bold);
+	info1.setFillColor(sf::Color::White);
+	info1.setPosition(400.0f, IM_Y - 50.f);
+	info1.setCharacterSize(20);
+	info1.setString("Shift + C - open color picker\n"
+					"Mouse - navigation");
+
+
+	info2.setFont(font);
+	info2.setOrigin(0.0f, 0.0f);
+	info2.setStyle(sf::Text::Style::Bold);
+	info2.setFillColor(sf::Color::Red);
+	info2.setPosition(5.0f, IM_Y - 25.f);
+	info2.setCharacterSize(20);
+	info2.setString("Navigation disabled, close color picker");
+
+	updateIterationsText();
+	updateScaleText();
+
+
+	
 
 	sf::Image center_img;
 	center_img.loadFromFile("center.png");
@@ -127,172 +187,309 @@ int main() {
 	center_sp.setTexture(center_tex);
 	center_sp.setOrigin(20.0f, 20.0f);
 	center_sp.scale(0.4f, 0.4f);
-	center_sp.setPosition((float)params::main_window_size.x / 2.0f, (float)params::main_window_size.y / 2.0f);
+	center_sp.setPosition(IM_X / 2.0f, IM_Y / 2.0f);
 
 
 
-
-
-	sf::Vector2i last_mouse_pos;
-	bool main_window_closed = false;
-	bool update_sprite = true;
+	sf::Vector2i last_mouse_pos = { IM_X / 2, IM_Y / 2 };
+	
 	bool mouse_button_pressed = false;
-	int i = 0;
+	
 
 
-	main_window.setFramerateLimit(60);
-	ImGui::SFML::Init(main_window, true);
+	
 	sf::Clock deltaClock;
-	while (main_window.isOpen()) {
-		sf::Vector2i current_mouse_pos = sf::Mouse::getPosition();
-
+	sf::Clock deltaRender;
+	deltaRender.restart();
+	while (main_window.isOpen()) 
+	{
+		sf::Vector2i current_mouse_pos = last_mouse_pos;
+		
+		
 
 		sf::Event events_handler;
-		while (main_window.pollEvent(events_handler)) {
-			ImGui::SFML::ProcessEvent(events_handler);
-
-			if (events_handler.type == sf::Event::Closed) main_window_closed = true;
-			if (events_handler.type == sf::Event::Resized) main_window.setSize(params::main_window_size);
-			if (events_handler.type == sf::Event::MouseWheelMoved) {
-				if (events_handler.mouseWheel.delta == -1)
-				{
-					params::scale *= 1.2f;
-					update_sprite = true;
-				}
-				else if (events_handler.mouseWheel.delta == 1)
-				{
-					
-					params::scale /= 1.2f;
-					update_sprite = true;
-				}
+		if (params::color_change)
+		{
+			while (main_window.pollEvent(events_handler))
+			{
+				if (events_handler.type == sf::Event::Resized) main_window.setSize(params::main_window_size);
+				if (events_handler.type == sf::Event::Closed) params::settings_window_closed = true;
 				
 			}
-			if (events_handler.type == sf::Event::MouseButtonPressed) {
-				mouse_button_pressed = true;
-				last_mouse_pos = current_mouse_pos;
+		}
+		else
+		{
+
+			current_mouse_pos = sf::Mouse::getPosition();
+
+
+
+
+
+
+
+			while (main_window.pollEvent(events_handler))
+			{
+
+
+				if (events_handler.type == sf::Event::Closed) params::main_window_closed = true;
+				if (events_handler.type == sf::Event::Resized) main_window.setSize(params::main_window_size);
+
+
+				if (events_handler.type == sf::Event::MouseWheelMoved)
+				{
+
+					if (events_handler.mouseWheel.delta == -1)
+					{
+						
+						params::scale *= 1.2f;
+						updateScaleText();
+						set.update_sprite = true;
+					}
+					else if (events_handler.mouseWheel.delta == 1)
+					{
+
+						
+						params::scale /= 1.2f;
+						updateScaleText();
+						set.update_sprite = true;
+
+
+					}
+
+				}
+				if (events_handler.type == sf::Event::MouseButtonPressed)
+				{
+
+					mouse_button_pressed = true;
+					last_mouse_pos = current_mouse_pos;
+
+
+				}
+				if (events_handler.type == sf::Event::MouseButtonReleased)
+				{
+
+					mouse_button_pressed = false;
+					set.update_sprite = true;
+
+				}
+
 			}
-			if (events_handler.type == sf::Event::MouseButtonReleased) {
+		}
+
+
+		static auto c1 = set.img.getPixel(0,        0);
+		static auto c2 = set.img.getPixel(IM_X - 1, 0);
+		static auto c3 = set.img.getPixel(0,        IM_Y - 1);
+		static auto c4 = set.img.getPixel(IM_X - 1, IM_Y - 1);
+
+
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && sf::Keyboard::isKeyPressed(sf::Keyboard::C))
+		{
+			if (params::settings_window_closed)
+			{
+				if(mouse_button_pressed)
+					mouse_button_pressed = false;
+				params::settings_window_closed = false;
+				params::settings_thread = new std::thread(showSettings);
+				params::settings_thread->detach();
+			}
+
+		}
+		
+
+
+
+
+
+
+		if (set.update_sprite && deltaRender.getElapsedTime().asMilliseconds() > 500)
+		{
+			deltaRender.restart();
+			updateSprite();
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) && !set.update_sprite) 
+		{
+			params::number_of_iterations += 5;
+			
+			if (mouse_button_pressed)
 				mouse_button_pressed = false;
-				update_sprite = true;
-			}
+			set.update_colors = true;
+			set.update_sprite = true; 
+			
+			
+			updateIterationsText();
 		}
-		ImGui::SFML::Update(main_window, deltaClock.restart());
 
-		
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-			params::number_of_iterations += NUMBER_OF_COLOR_POINTS;
-			converter << params::number_of_iterations;
-			converter >> text_string;
-			converter.clear();
-			text.setString(text_string);
+
+
+
+
+
+
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && !set.update_sprite) 
+		{
+			if (!(params::number_of_iterations < params::number_of_color_points))
+				params::number_of_iterations -= 5;
+
+			
+			if(mouse_button_pressed)
+				mouse_button_pressed = false;
+			set.update_colors = true;
+			set.update_sprite = true;
+
+
+			updateIterationsText();
 		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-			params::number_of_iterations -= NUMBER_OF_COLOR_POINTS;
-			if (params::number_of_iterations < NUMBER_OF_COLOR_POINTS) 
-				params::number_of_iterations = NUMBER_OF_COLOR_POINTS;
 
 
-			converter << params::number_of_iterations;
-			converter >> text_string;
-			converter.clear();
-			text.setString(text_string);
+
+
+
+
+
+
+
+
+
+
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) && !params::frame_saved) 
+		{
+			params::frame_saved = true;
+			saveFrame();
 		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) saveFrame();
-		
-		if (mouse_button_pressed) {
+		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::S)) params::frame_saved = false;
+
+
+
+		if (mouse_button_pressed) 
+		{
 			params::delta_mx += Mandelbrot::countDeltaMx_My(last_mouse_pos.x, current_mouse_pos.x, params::scale);
 			params::delta_my += Mandelbrot::countDeltaMx_My(last_mouse_pos.y, current_mouse_pos.y, params::scale);
 			set.sp.setPosition(set.sp.getPosition().x + (last_mouse_pos.x - current_mouse_pos.x) * -1,
 								set.sp.getPosition().y + (last_mouse_pos.y - current_mouse_pos.y) * -1);
+
+		}
+		else
+		{
+			set.lock_img.lock();
+			set.tex.loadFromImage(set.img);
+			set.sp.setTexture(set.tex);
+			set.sp.setPosition(params::img_pos);
+			set.lock_img.unlock();
 		}
 		last_mouse_pos = current_mouse_pos;
-		if (update_sprite) {
-			std::cout << "render" << std::endl;
-			sf::Clock clock;
-			set.sp.setPosition(params::img_pos);
-			params::mx = Mandelbrot::countMx_My(0, params::main_window_size.x - 1, params::scale, params::delta_mx);
-			params::my = Mandelbrot::countMx_My(0, params::main_window_size.y - 1, params::scale, params::delta_my);
-			updateSprite();
-			update_sprite = false;
-			std::cout << " seconds_passed " << clock.getElapsedTime().asSeconds() << std::endl << std::endl;
-		}
 
 
 
+		
+		
 
-		main_window.clear(sf::Color(63, 63, 63, 255));
+		main_window.clear({	sf::Uint8((c1.r + c2.r + c3.r + c4.r) / 4),
+							sf::Uint8((c1.g + c2.g + c3.g + c4.g) / 4),
+							sf::Uint8((c1.b + c2.b + c3.b + c4.b) / 4),
+							sf::Uint8((c1.a + c2.a + c3.a + c4.a) / 4) });
+		
 		main_window.draw(set.sp);
-		main_window.draw(text);
+		main_window.draw(iter_count);
+		main_window.draw(scale);
+		if (params::color_change)
+		{
+			main_window.draw(info2);
+		}
+		else
+		{
+			main_window.draw(info);
+			main_window.draw(info1);
+		}
 		main_window.draw(center_sp);
-		ImGui::SFML::Render(main_window);
+		
+
+		
 		main_window.display();
 
-		if (main_window_closed) {
+		if (params::main_window_closed) 
+		{
 			//saving settings
-
-			should_generate_img = false;
+			
 			main_window.close();
 		}
 	
 
 	}
-	updateSprite();
-	for (unsigned i = 0; i < params::number_of_render_threads; i++) 
-		set.thread_lockers[i].unlock();
+	set.main_window_closed = true;
+	set.restartRender();
 	
-	for (size_t i = 0; i < IM_Y; ++i)
-		delete[] params::koeffs[i];
-
-	delete[] params::koeffs;
+	
+	
 
 	return 0;
 }
 
 
+void updateScaleText()
+{
+	static std::string buffer;
+	static std::stringstream converter;
+	converter << params::scale;
+	converter >> buffer;
+	converter.clear();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void mandelbrotSetRenderThread(unsigned id) {
-	
-	while (main_window.isOpen()) {
-		set.wait[id].lock();
-		set.thread_lockers[id].lock();
-		set.wait[id].unlock();
-		set.img_lockers[id].lock();
-		set.thread_lockers[id].unlock();
-		if (should_generate_img) {
-			Mandelbrot::createKoeffsPart(params::koeffs,
-										params::render_positions[id],
-										params::render_size,
-										params::scale,
-										params::mx,
-										params::my,
-										params::number_of_iterations,
-										params::radius);
-		}
-		set.img_lockers[id].unlock();
-	}
+	scale.setString("Zoom: " + buffer);
 }
 
+void updateIterationsText()
+{
+	static std::string buffer;
+	static std::stringstream converter;
+	converter << params::number_of_iterations;
+	converter >> buffer;
+	converter.clear();
+
+	iter_count.setString("Detalization: " + buffer);
+}
+
+void showSettings()
+{
+	settings_window.create(sf::VideoMode(params::settings_window_size.x, params::settings_window_size.y), " ", sf::Style::Default);
+	settings_window.setFramerateLimit(60);
+	params::color_change = true;
+	ImGui::SFML::Init(settings_window, true);
+	sf::Clock deltaClock;
+	while (settings_window.isOpen()) {
+		if(params::windows_magnet)
+			settings_window.setPosition({ main_window.getPosition().x - 400,main_window.getPosition().y });
+
+		sf::Event events_handler;
+		while (settings_window.pollEvent(events_handler))
+		{
+			ImGui::SFML::ProcessEvent(events_handler);
+			if (events_handler.type == sf::Event::Closed) params::settings_window_closed = true;
+			if (events_handler.type == sf::Event::Resized) settings_window.setSize(params::settings_window_size);
+		}
+		ImGui::SFML::Update(settings_window, deltaClock.restart());
+		settings_window.clear({ 0, 0, 0, 255 });
 
 
+		drawColorPicker();
 
 
+		ImGui::SFML::Render(settings_window);
+		settings_window.display();
+		if (params::settings_window_closed
+			|| params::main_window_closed)
+		{
 
+			settings_window.close();
+		}
+	}
+	params::color_change = false;
+	delete params::settings_thread;
+}
 
 
 
@@ -302,26 +499,232 @@ void mandelbrotSetRenderThread(unsigned id) {
 
 void updateSprite()
 {
-	unsigned i;
-	for (i = 0; i < params::number_of_render_threads; i++) set.thread_lockers[i].unlock();
-	for (i = 0; i < params::number_of_render_threads; i++) set.wait[i].lock();
-	for (i = 0; i < params::number_of_render_threads; i++) set.thread_lockers[i].lock();
-	for (i = 0; i < params::number_of_render_threads; i++) set.wait[i].unlock();
-	for (i = 0; i < params::number_of_render_threads; i++) set.img_lockers[i].lock();
+	set.stop_render = true;
+	params::next_x = 0;
+	params::next_y = 0;
+	params::mx = Mandelbrot::countMx_My(0, IM_X - 1, params::scale, params::delta_mx);
+	params::my = Mandelbrot::countMx_My(0, IM_Y - 1, params::scale, params::delta_my);
 
-	double s = getCPUTime();
-	set.updatePixels(params::koeffs, IM_X, IM_Y);
-	double e = getCPUTime();
-	std::cout << e - s << std::endl;
-	set.tex.loadFromImage(set.img);
-	set.sp.setTexture(set.tex);
-	set.sp.setPosition(params::img_pos);
+	if (set.update_colors)
+	{
+		set.createColorsTable(params::number_of_iterations);
+		
+	}
+	set.restartRender();
 
-	for (i = 0; i < params::number_of_render_threads; i++) set.img_lockers[i].unlock();
+
+	
+	set.stop_render = false;
+	set.update_sprite = false;
+	
+	
 }
 
+void drawColorPicker()
+{
+	ImGui::SetNextWindowPos({0, 0});
+	ImGui::Begin("Color Picker", nullptr, params::settings_window_size, 1.0f,
+		ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_::ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_::ImGuiWindowFlags_NoSavedSettings);
+	
+	ImGui::BeginChild("##colors", ImVec2(0.f, params::settings_window_size.y - 200.f), true);
+	for (size_t i = 0; i < params::number_of_color_points; ++i)
+	{	
+		ImGui::PushID(i);
+		float colors[4] = {
+			float(set.color_point[i].r) / 255.f,
+			float(set.color_point[i].g) / 255.f,
+			float(set.color_point[i].b) / 255.f,
+			float(set.color_point[i].a) / 255.f
+		};
+		if (ImGui::ColorEdit4("colorPic", colors, 
+			ImGuiColorEditFlags_::ImGuiColorEditFlags_NoLabel |
+			ImGuiColorEditFlags_::ImGuiColorEditFlags_Float |
+			ImGuiColorEditFlags_::ImGuiColorEditFlags_AlphaBar))
+		{
+			if (!set.update_sprite)
+			{
+				set.color_point[i] = sf::Color(
+					sf::Uint8(colors[0] * 255.f),
+					sf::Uint8(colors[1] * 255.f),
+					sf::Uint8(colors[2] * 255.f),
+					sf::Uint8(colors[3] * 255.f)
+				);
+				set.stop_render = true;
+				set.update_colors = true;
+				set.update_sprite = true;
+			}
+		}
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(400.f - ImGui::GetStyle().ItemSpacing.x * 3.f - 20.f);
+		if (ImGui::Button("X", { 20.f, 20.f }))
+		{
+			if (params::number_of_color_points > 1)
+			{
+				--params::number_of_color_points;
+				set.color_point.erase(set.color_point.begin() + i);
+				set.stop_render = true;
+				set.update_colors = true;
+				set.update_sprite = true;
+			}
+
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+			ImGui::TextColored({ 1.f, 0.f, 0.f, 1.f }, "Delete color point...");
+
+			ImGui::EndTooltip();
+
+		}
+		ImGui::PopID();
+	}
+	ImGui::EndChild();
+	if (ImGui::Button("Add new color", ImVec2(400.f - ImGui::GetStyle().ItemSpacing.x * 2.f, 25.f)))
+	{
+		set.color_point.push_back({ 0,0,0,255 });
+		
+
+		++params::number_of_color_points;
+		if (params::number_of_iterations < params::number_of_color_points)
+			params::number_of_iterations = params::number_of_color_points;
 
 
+		updateIterationsText();
+		
+
+		set.stop_render = true;
+		set.update_colors = true;
+		set.update_sprite = true;
+
+	}
+	static bool cleaned = false;
+	static bool print_success_msg = false;
+	static std::array <char, 64> filename;
+	if (!cleaned)
+	{
+		memset(filename.data(), '\0', filename.size());
+		cleaned = true;
+	}
+	
+	
+	
+	if (ImGui::CollapsingHeader("Save##1"))
+	{
+		ImGui::InputText("Filename", filename.data(), filename.size());
+		if (print_success_msg)
+			ImGui::TextColored({ 0.f, 1.f, 0.f, 1.f }, "Saved.");
+		else
+			ImGui::TextColored({ 1.f, 0.f, 0.f, 1.f }, "Print filename, then press \"Save\".");
+
+		if (ImGui::Button("Save", ImVec2(400.f - ImGui::GetStyle().ItemSpacing.x * 2.f, 25.f)))
+		{
+			std::string name = utf8_to_string(filename.data(), std::locale(".1251"));
+			std::cout << name << std::endl;
+			if (!name.empty())
+			{
+				set.saveColors(name);
+				print_success_msg = true;
+				cleaned = false;
+			}
+			else
+				print_success_msg = false;
+
+		}
+		
+	}
+	else
+	{
+		ImGui::Checkbox("Enable magnet for windows", &params::windows_magnet);
+		ImGui::Separator();
+		ImGui::TextColored({ 0.f, 0.75f, 1.f, 1.f }, "Detalization");
+		static float width = (400.f - ImGui::GetStyle().ItemSpacing.x * 5.f) / 4.f;
+		if (ImGui::Button("+10", { width, 25.f }))
+		{
+			params::number_of_iterations += 10;
+			
+			set.stop_render = true;
+			set.update_colors = true;
+			set.update_sprite = true;
+
+
+			updateIterationsText();
+
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("+1", { width, 25.f }))
+		{
+			++params::number_of_iterations;
+
+			set.stop_render = true;
+			set.update_colors = true;
+			set.update_sprite = true;
+
+
+			updateIterationsText();
+
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("-1", { width, 25.f }))
+		{
+			--params::number_of_iterations;
+			if (params::number_of_iterations < params::number_of_color_points)
+				params::number_of_iterations = params::number_of_color_points;
+
+
+
+			set.stop_render = true;
+			set.update_colors = true;
+			set.update_sprite = true;
+
+
+			updateIterationsText();
+
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("-10", { width, 25.f }))
+		{
+			params::number_of_iterations -= 10;
+			if (params::number_of_iterations < params::number_of_color_points)
+				params::number_of_iterations = params::number_of_color_points;
+
+
+
+			set.stop_render = true;
+			set.update_colors = true;
+			set.update_sprite = true;
+
+
+			updateIterationsText();
+
+		}
+	}
+	ImGui::SetCursorPosY(IM_X - ImGui::GetStyle().ItemSpacing.y * 2.f - 25.f);
+	if (ImGui::Button("Open saved colors set...", ImVec2(400.f - ImGui::GetStyle().ItemSpacing.x * 2.f, 25.f)))
+	{
+		auto file = pfd::open_file("Open colors set",
+			std::filesystem::current_path().string() + "\\colors\\",
+			{ "Saves (.colset)"
+			,"*.colset" });
+		if (!file.result().empty())
+		{
+			set.loadColors(*file.result().begin());
+			params::number_of_color_points = set.color_point.size();
+			if (params::number_of_iterations < params::number_of_color_points)
+				params::number_of_iterations = params::number_of_color_points;
+			set.stop_render = true;
+			set.update_colors = true;
+			set.update_sprite = true;
+
+
+			updateIterationsText();
+		}
+	}
+
+	ImGui::End();
+}
 
 
 
@@ -333,34 +736,64 @@ void updateSprite()
 
 void saveFrame()
 {
-	std::stringstream converter;
-	std::string idx_str;
-	converter << params::number_of_saved_img;
-	converter >> idx_str;
-	converter.clear();
-	set.img.saveToFile("frames\\frame" + idx_str + ".jpg");
-	params::number_of_saved_img += 1;
-	std::cout << "frame " << idx_str << " saved" << std::endl;
+	std::time_t cur_time = std::time(nullptr);
+	std::string time_str = std::ctime(&cur_time);
+	
+	for (size_t i = 0; i < time_str.size(); ++i)
+		if (time_str[i] == ':') time_str[i] = '.';
+
+	time_str.erase(--time_str.end());
+	set.lock_img.lock();
+	set.img.saveToFile(".\\frames\\" + time_str + ".jpg");
+	set.lock_img.unlock();
 }
 
 
 
 
-
-
-
-
-
-
-
-
-void createRenderThreads()
+std::string utf8_to_string(const char *utf8str, const std::locale& loc)
 {
+	// UTF-8 to wstring
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> wconv;
+	std::wstring wstr = wconv.from_bytes(utf8str);
+	// wstring to string
+	std::vector<char> buf(wstr.size());
+	std::use_facet<std::ctype<wchar_t>>(loc).narrow(wstr.data(), wstr.data() + wstr.size(), '?', buf.data());
+	return std::string(buf.data(), buf.size());
+}
 
-	for (size_t i = 0; i < THREADS_COUNT; ++i)
+
+
+
+void renderThread(unsigned id)
+{
+	
+	while (main_window.isOpen())
 	{
-		std::thread* thread = new std::thread(mandelbrotSetRenderThread, i);
-		thread->detach();
-		params::threads.push_back(thread);
+		set.lock_stream_is_running[id].lock();
+		if (set.update_colors)
+			set.updatePixels(params::next_x,
+				params::next_y,
+				params::img_size);
+		else
+			set.createImgPart(id,
+				params::next_x,
+				params::next_y,
+				params::img_size,
+				params::scale,
+				params::mx,
+				params::my,
+				params::number_of_iterations,
+				params::radius);
+		set.lock_stream_is_running[id].unlock();
+		std::unique_lock <std::mutex> locker(set.lock_render);
+
+		while (!set.restart_render[id])
+		{
+			set.lock_render_condition.wait(locker);
+		}
+		set.restart_render[id] = false;
+		if (set.update_sprite)	set.update_sprite = false;
+		if (set.update_colors)	set.update_colors = false;
 	}
 }
