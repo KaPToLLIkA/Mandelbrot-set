@@ -245,6 +245,7 @@ int main()
 						params::scale *= 1.2f;
 						updateScaleText();
 						set.update_sprite = true;
+						set.rendered = false;
 					}
 					else if (events_handler.mouseWheel.delta == 1)
 					{
@@ -253,6 +254,7 @@ int main()
 						params::scale /= 1.2f;
 						updateScaleText();
 						set.update_sprite = true;
+						set.rendered = false;
 
 
 					}
@@ -271,6 +273,7 @@ int main()
 
 					mouse_button_pressed = false;
 					set.update_sprite = true;
+					set.rendered = false;
 
 				}
 
@@ -317,7 +320,7 @@ int main()
 				mouse_button_pressed = false;
 			set.update_colors = true;
 			set.update_sprite = true; 
-			
+			set.rendered = false;
 			
 			updateIterationsText();
 		}
@@ -340,7 +343,7 @@ int main()
 				mouse_button_pressed = false;
 			set.update_colors = true;
 			set.update_sprite = true;
-
+			set.rendered = false;
 
 			updateIterationsText();
 		}
@@ -520,8 +523,16 @@ void updateSprite()
 	
 }
 
+static bool enable_auto_update = true;
+static bool cleaned = false;
+static bool print_success_msg = false;
+static bool iter_changed = false;
+static std::array <char, 64> filename;
+
 void drawColorPicker()
 {
+	
+
 	ImGui::SetNextWindowPos({0, 0});
 	ImGui::Begin("Color Picker", nullptr, params::settings_window_size, 1.0f,
 		ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse |
@@ -529,7 +540,7 @@ void drawColorPicker()
 		ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_::ImGuiWindowFlags_NoSavedSettings);
 	
-	ImGui::BeginChild("##colors", ImVec2(0.f, params::settings_window_size.y - 200.f), true);
+	ImGui::BeginChild("##colors", ImVec2(0.f, params::settings_window_size.y - 300.f), true);
 	for (size_t i = 0; i < params::number_of_color_points; ++i)
 	{	
 		ImGui::PushID(i);
@@ -544,7 +555,22 @@ void drawColorPicker()
 			ImGuiColorEditFlags_::ImGuiColorEditFlags_Float |
 			ImGuiColorEditFlags_::ImGuiColorEditFlags_AlphaBar))
 		{
-			if (!set.update_sprite)
+			if (enable_auto_update)
+			{
+				
+				set.color_point[i] = sf::Color(
+					sf::Uint8(colors[0] * 255.f),
+					sf::Uint8(colors[1] * 255.f),
+					sf::Uint8(colors[2] * 255.f),
+					sf::Uint8(colors[3] * 255.f)
+				);
+				
+				set.stop_render = true;
+				set.update_colors = true;
+				set.update_pixels = true;
+				set.update_sprite = true;
+			}
+			else
 			{
 				set.color_point[i] = sf::Color(
 					sf::Uint8(colors[0] * 255.f),
@@ -552,9 +578,7 @@ void drawColorPicker()
 					sf::Uint8(colors[2] * 255.f),
 					sf::Uint8(colors[3] * 255.f)
 				);
-				set.stop_render = true;
-				set.update_colors = true;
-				set.update_sprite = true;
+
 			}
 		}
 		ImGui::SameLine();
@@ -567,7 +591,9 @@ void drawColorPicker()
 				set.color_point.erase(set.color_point.begin() + i);
 				set.stop_render = true;
 				set.update_colors = true;
+				set.update_pixels = true;
 				set.update_sprite = true;
+
 			}
 
 		}
@@ -600,18 +626,28 @@ void drawColorPicker()
 		set.update_sprite = true;
 
 	}
-	static bool cleaned = false;
-	static bool print_success_msg = false;
-	static std::array <char, 64> filename;
+	
 	if (!cleaned)
 	{
 		memset(filename.data(), '\0', filename.size());
 		cleaned = true;
 	}
 	
-	
-	
-	if (ImGui::CollapsingHeader("Save##1"))
+	ImGui::Checkbox("Enable frame auto-updating", &enable_auto_update);
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::BeginTooltip();
+
+		ImGui::Text("If not active, you will need\n"
+					"to manually update the image\n"
+					"by clicking on the \"Refresh\n"
+					"frame\" button.");
+
+		ImGui::EndTooltip();
+	}
+
+
+	if (ImGui::CollapsingHeader("Save colorset##1"))
 	{
 		ImGui::InputText("Filename", filename.data(), filename.size());
 		if (print_success_msg)
@@ -637,6 +673,7 @@ void drawColorPicker()
 	}
 	else
 	{
+		ImGui::NewLine();
 		ImGui::Checkbox("Enable magnet for windows", &params::windows_magnet);
 		ImGui::Separator();
 		ImGui::TextColored({ 0.f, 0.75f, 1.f, 1.f }, "Detalization");
@@ -644,12 +681,14 @@ void drawColorPicker()
 		if (ImGui::Button("+10", { width, 25.f }))
 		{
 			params::number_of_iterations += 10;
-			
-			set.stop_render = true;
-			set.update_colors = true;
-			set.update_sprite = true;
-
-
+			if (enable_auto_update)
+			{
+				set.stop_render = true;
+				set.update_colors = true;
+				set.update_sprite = true;
+				set.rendered = false;
+			}
+			iter_changed = true;
 			updateIterationsText();
 
 		}
@@ -658,9 +697,14 @@ void drawColorPicker()
 		{
 			++params::number_of_iterations;
 
-			set.stop_render = true;
-			set.update_colors = true;
-			set.update_sprite = true;
+			if (enable_auto_update)
+			{
+				set.stop_render = true;
+				set.update_colors = true;
+				set.update_sprite = true;
+				set.rendered = false;
+			}
+			iter_changed = true;
 
 
 			updateIterationsText();
@@ -675,10 +719,14 @@ void drawColorPicker()
 
 
 
-			set.stop_render = true;
-			set.update_colors = true;
-			set.update_sprite = true;
-
+			if (enable_auto_update)
+			{
+				set.stop_render = true;
+				set.update_colors = true;
+				set.update_sprite = true;
+				set.rendered = false;
+			}
+			iter_changed = true;
 
 			updateIterationsText();
 
@@ -692,17 +740,35 @@ void drawColorPicker()
 
 
 
-			set.stop_render = true;
-			set.update_colors = true;
-			set.update_sprite = true;
+			if (enable_auto_update)
+			{
+				set.stop_render = true;
+				set.update_colors = true;
+				set.update_sprite = true;
+				set.rendered = false;
+			}
+			iter_changed = true;
 
 
 			updateIterationsText();
 
 		}
 	}
-	ImGui::SetCursorPosY(IM_X - ImGui::GetStyle().ItemSpacing.y * 2.f - 25.f);
-	if (ImGui::Button("Open saved colors set...", ImVec2(400.f - ImGui::GetStyle().ItemSpacing.x * 2.f, 25.f)))
+	ImGui::SetCursorPosY(IM_X - ImGui::GetStyle().ItemSpacing.y * 3.f - 50.f);
+	if (ImGui::Button("Refresh frame", ImVec2(400.f - ImGui::GetStyle().ItemSpacing.x * 2.f, 25.f)))
+	{
+		set.stop_render = true;
+		set.update_colors = true;
+		set.update_sprite = true;
+		if (iter_changed)
+		{
+			set.rendered = false;
+			iter_changed = false;
+		}
+		else
+			set.update_pixels = true;
+	}
+	if (ImGui::Button("Open saved colorset...", ImVec2(400.f - ImGui::GetStyle().ItemSpacing.x * 2.f, 25.f)))
 	{
 		auto file = pfd::open_file("Open colors set",
 			std::filesystem::current_path().string() + "\\colors\\",
@@ -771,11 +837,15 @@ void renderThread(unsigned id)
 	while (main_window.isOpen())
 	{
 		set.lock_stream_is_running[id].lock();
-		if (set.update_colors)
+		if (set.update_pixels)
+		{
 			set.updatePixels(params::next_x,
 				params::next_y,
 				params::img_size);
-		else
+			set.update_pixels = false;
+		}
+		if (!set.rendered)
+		{
 			set.createImgPart(id,
 				params::next_x,
 				params::next_y,
@@ -785,6 +855,11 @@ void renderThread(unsigned id)
 				params::my,
 				params::number_of_iterations,
 				params::radius);
+			if (set.stop_render)
+				set.rendered = false;
+			else
+				set.rendered = true;
+		}
 		set.lock_stream_is_running[id].unlock();
 		std::unique_lock <std::mutex> locker(set.lock_render);
 
@@ -793,7 +868,5 @@ void renderThread(unsigned id)
 			set.lock_render_condition.wait(locker);
 		}
 		set.restart_render[id] = false;
-		if (set.update_sprite)	set.update_sprite = false;
-		if (set.update_colors)	set.update_colors = false;
 	}
 }

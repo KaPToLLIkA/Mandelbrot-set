@@ -266,6 +266,7 @@ namespace Mandelbrot
 
 			if (next_y == img_size.y)
 			{
+				
 				++next_x;
 				next_y = 0;
 #ifdef ENABLE_LOGGING
@@ -288,6 +289,7 @@ namespace Mandelbrot
 					"{x: " + std::to_string(x) + "; stop_rendering_flag:" + std::to_string(stop_render) + "}\n";
 				lock_log_print.unlock();
 #endif
+				
 				break;
 			}
 

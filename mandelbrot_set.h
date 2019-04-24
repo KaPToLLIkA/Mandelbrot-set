@@ -30,6 +30,8 @@ namespace Mandelbrot
 		unsigned **koeffs;
 
 		bool update_colors = false;
+		bool update_pixels = false;
+		bool rendered = false;
 		bool stop_render = false;
 		bool update_sprite = true;
 		bool main_window_closed = false;
