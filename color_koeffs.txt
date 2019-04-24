@@ -1,7 +1,0 @@
-4 	//red 
-4 	//green
-4 	//blue
-255 //alpha
-
-in range 0..255
-color(k) = k * iteration;
