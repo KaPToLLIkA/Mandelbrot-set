@@ -2,52 +2,7 @@
 #include <stdint.h>
 
 namespace color {
-	class ColorInt
-	{
-	private:
-		int8_t r;
-		int8_t g;
-		int8_t b;
-		int8_t a;
-	public:
 
-
-
-		ColorInt(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) :
-			r(r - 128), g(g - 128), b(b - 128), a(a - 128)
-		{
-
-		}
-
-		ColorInt() : r(-128), g(-128), b(-128), a(127)
-		{
-
-		}
-
-		void setR(uint8_t val) { r = val - 128; }
-		void setG(uint8_t val) { g = val - 128; }
-		void setB(uint8_t val) { b = val - 128; }
-		void setA(uint8_t val) { a = val - 128; }
-
-		uint8_t R() { return uint8_t(r + 128); }
-		uint8_t G() { return uint8_t(g + 128); }
-		uint8_t B() { return uint8_t(b + 128); }
-		uint8_t A() { return uint8_t(a + 128); }
-
-		friend ColorInt operator+(const ColorInt&, const ColorInt&);
-		friend ColorInt operator-(const ColorInt&, const ColorInt&);
-		friend ColorInt operator*(const ColorInt&, uint8_t);
-
-		const ColorInt& operator+=(const ColorInt&);
-		const ColorInt& operator-=(const ColorInt&);
-
-		const ColorInt& operator=(const ColorInt&);
-
-		virtual ~ColorInt()
-		{
-
-		}
-	};
 
 	class ColorUint
 	{
@@ -83,7 +38,52 @@ namespace color {
 
 	class ColorFloat
 	{
+	private:
+		float r;
+		float g;
+		float b;
+		float a;
+	public:
 
+
+
+		ColorFloat(float r, float g, float b, float a = 1.0f) :
+			r(((r > 1.0f ? 1.0f : r) < 0.0f ? 0.0f : r)), 
+			g(((g > 1.0f ? 1.0f : g) < 0.0f ? 0.0f : g)),
+			b(((b > 1.0f ? 1.0f : b) < 0.0f ? 0.0f : b)),
+			a(((a > 1.0f ? 1.0f : a) < 0.0f ? 0.0f : a))
+		{
+
+		}
+
+		ColorFloat() : r(0.f), g(0.f), b(0.f), a(1.0f)
+		{
+
+		}
+
+		void setR(float val) { r = ((val > 1.0f ? 1.0f : val) < 0.0f ? 0.0f : val); }
+		void setG(float val) { g = ((val > 1.0f ? 1.0f : val) < 0.0f ? 0.0f : val); }
+		void setB(float val) { b = ((val > 1.0f ? 1.0f : val) < 0.0f ? 0.0f : val); }
+		void setA(float val) { a = ((val > 1.0f ? 1.0f : val) < 0.0f ? 0.0f : val); }
+
+		float R() { return r; }
+		float G() { return g; }
+		float B() { return b; }
+		float A() { return a; }
+
+		friend ColorFloat operator+(const ColorFloat&, const ColorFloat&);
+		friend ColorFloat operator-(const ColorFloat&, const ColorFloat&);
+		friend ColorFloat operator*(const ColorFloat&, float);
+
+		const ColorFloat& operator+=(const ColorFloat&);
+		const ColorFloat& operator-=(const ColorFloat&);
+
+		const ColorFloat& operator=(const ColorFloat&);
+
+		virtual ~ColorFloat()
+		{
+
+		}
 
 	};
 } //end of color namespace

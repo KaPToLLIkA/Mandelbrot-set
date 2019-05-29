@@ -2,92 +2,16 @@
 
 
 
-template<class T>
-RenderThreads<T>::RenderThreads()
+
+RenderThreads::RenderThreads()
 {
 }
 
 
-template<class T>
-RenderThreads<T>::RenderThreads(
-				size_t number_of_threads,
-				T* obj,
-				void(*thr_funct)(T * obj,
-					std::mutex * pauser,
-					std::mutex * work_locker,
-					std::mutex * wait_restart,
-					std::condition_variable * alert,
-					bool * notified,
-					bool * exit,
-					bool * stop_render)) :
-	number_of_threads(number_of_threads),
-	wait_restart(new std::mutex),
-	alert(new std::condition_variable),
-	notified(std::vector <bool>(number_of_threads, false))
-{
-	
-	for (size_t i = 0; i < number_of_threads; ++i)
-	{
-		work_locker_target_thread.push_back(new std::mutex);
-		pauser_target_thread.push_back(new std::mutex);
 
 
 
-
-		/*threads.push_back(new std::thread((*thr_funct),
-			obj,
-			pauser_target_thread[i],
-			work_locker_target_thread[i],
-			wait_restart,
-			alert,
-			&notified[i],
-			&end_flag,
-			&stop_render));
-		threads[i]->detach();*/
-	}
-}
-
-template<class T>
-void RenderThreads<T>::CreateThreads(
-					size_t number_of_threads, 
-					T * obj, 
-					void(*thr_funct)(T * obj, 
-						std::mutex * pauser,
-						std::mutex * work_locker,
-						std::mutex * wait_restart,
-						std::condition_variable * alert,
-						bool * notified,
-						bool * exit,
-						bool * stop_render))
-{
-	this->number_of_threads = number_of_threads;
-	wait_restart = new std::mutex;
-	alert = new std::condition_variable;
-	notified = std::vector <bool>(number_of_threads, false);
-
-	for (size_t i = 0; i < number_of_threads; ++i)
-	{
-		work_locker_target_thread.push_back(new std::mutex);
-		pauser_target_thread.push_back(new std::mutex);
-
-		
-		
-		
-		/*threads.push_back(new std::thread((*thr_funct),
-			obj,
-			pauser_target_thread[i],
-			work_locker_target_thread[i],
-			wait_restart,
-			alert,
-			&notified[i],
-			&end_flag,
-			&stop_render));
-		threads[i]->detach();*/
-	}
-}
-
-template<class T>
-void RenderThreads<T>::StartAllThreads()
+void RenderThreads::StartAllThreads()
 {
 	for (auto locker : work_locker_target_thread)
 		locker->lock();
@@ -102,8 +26,8 @@ void RenderThreads<T>::StartAllThreads()
 	for (auto locker : work_locker_target_thread)
 		locker->unlock();
 }
-template<class T>
-void RenderThreads<T>::StopAllThreads()
+
+void RenderThreads::StopAllThreads()
 {
 	stop_render = true;
 	for (auto locker : work_locker_target_thread)
@@ -112,8 +36,8 @@ void RenderThreads<T>::StopAllThreads()
 		locker->unlock();
 	stop_render = false;
 }
-template<class T>
-void RenderThreads<T>::StartConcreteThread(int idx)
+
+void RenderThreads::StartConcreteThread(int idx)
 {
 	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
 	{
@@ -126,8 +50,8 @@ void RenderThreads<T>::StartConcreteThread(int idx)
 	}
 }
 
-template<class T>
-void RenderThreads<T>::StopConcreteThread(int idx)
+
+void RenderThreads::StopConcreteThread(int idx)
 {
 	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
 	{
@@ -138,36 +62,36 @@ void RenderThreads<T>::StopConcreteThread(int idx)
 	}
 }
 
-template<class T>
-void RenderThreads<T>::setPauseAllThreads()
+
+void RenderThreads::setPauseAllThreads()
 {
 	for (auto locker : pauser_target_thread)
 		locker->lock();
 }
 
-template<class T>
-void RenderThreads<T>::unsetPauseAllThreads()
+
+void RenderThreads::unsetPauseAllThreads()
 {
 	for (auto locker : pauser_target_thread)
 		locker->unlock();
 }
 
-template<class T>
-void RenderThreads<T>::setPauseConcreteThread(int idx)
+
+void RenderThreads::setPauseConcreteThread(int idx)
 {
 	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
 		pauser_target_thread[idx]->lock();
 }
 
-template<class T>
-void RenderThreads<T>::unsetPauseConcreteThread(int idx)
+
+void RenderThreads::unsetPauseConcreteThread(int idx)
 {
 	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
 		pauser_target_thread[idx]->unlock();
 }
 
-template<class T>
-void RenderThreads<T>::EndThreads()
+
+void RenderThreads::EndThreads()
 {
 	end_flag = true;
 	
@@ -180,7 +104,7 @@ void RenderThreads<T>::EndThreads()
 
 
 
-template<class T>
-RenderThreads<T>::~RenderThreads()
+
+RenderThreads::~RenderThreads()
 {
 }

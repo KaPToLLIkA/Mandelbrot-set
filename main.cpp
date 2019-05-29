@@ -24,13 +24,16 @@
 
 namespace params 
 {
-
+	std::thread *new_thread;
 	
 	sf::Vector2u	menu_window_size = { 600, 800 };
 
-	
+
+	std::mutex lock_menu;
+	bool notified = true;
 	bool opened_mandelbrot_window = false;
 	bool menu_window_closed = false;
+	bool menu_window_rolled = false;
 }
 
 namespace fractl 
@@ -56,6 +59,15 @@ int main()
 	Frame bg;
 	while (!params::menu_window_closed)
 	{
+		while (!params::notified)
+		{
+			params::lock_menu.lock();
+			params::lock_menu.unlock();
+		}
+		params::notified = false;
+		delete params::new_thread;
+
+
 		sf::RenderWindow menu_window(sf::VideoMode(params::menu_window_size.x, params::menu_window_size.y), " ", sf::Style::Default);
 		menu_window.setVerticalSyncEnabled(true);
 		menu_window.setFramerateLimit(60);
@@ -128,7 +140,9 @@ int main()
 				if(ImGui::Button("Mandelbrot", { params::menu_window_size.x * 0.4f, 30.f }))
 				{
 					params::opened_mandelbrot_window = true;
-					auto f = std::async(MandelbrotView);
+					params::menu_window_rolled = true;
+					params::new_thread = new std::thread(MandelbrotView);
+					params::new_thread->detach();
 				}
 
 				ImGui::SetCursorPos({ params::menu_window_size.x*0.3f, params::menu_window_size.y - 60.f });
@@ -146,11 +160,12 @@ int main()
 
 			ImGui::SFML::Render(menu_window);
 			menu_window.display();
-			if (params::menu_window_closed)
+			if (params::menu_window_closed || params::menu_window_rolled)
 			{
 				//saving settings
 
 				menu_window.close();
+				
 			}
 
 
@@ -163,6 +178,7 @@ int main()
 
 void MandelbrotView()
 {
+	params::lock_menu.lock();
 	sf::RenderWindow window(sf::VideoMode(FRAME_MANDEL_X, FRAME_MANDEL_Y), " ", sf::Style::Default);
 
 	window.setVerticalSyncEnabled(true);
@@ -221,13 +237,15 @@ void MandelbrotView()
 
 
 		window.display();
-		if (params::opened_mandelbrot_window)
+		if (!params::opened_mandelbrot_window)
 		{
-			//saving settings
+			params::menu_window_rolled = false;
+			params::notified = true;
 
 			window.close();
 		}
 
 
 	}
+	params::lock_menu.unlock();
 }

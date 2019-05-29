@@ -12,13 +12,13 @@ class MandelSet
 {
 private:
 	dscr::Mandelbrot_dscr dscr;
-
+	
 	unsigned **iter_matrix;
 
-
+	std::vector <color::ColorFloat> color_table;
 public:
 	std::mutex lock_matrix;
-	RenderThreads<MandelSet> *render_engine;
+	RenderThreads *render_engine;
 	
 	MandelSet& operator=(const MandelSet&) = delete;
 	MandelSet(const MandelSet&) = delete;
@@ -39,6 +39,8 @@ public:
 								bool * notified,
 								bool * exit,
 								bool * stop_render);
+
+	void createGradientColorsTable();
 
 };
 

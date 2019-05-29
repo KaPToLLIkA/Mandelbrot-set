@@ -103,7 +103,7 @@ MandelSet::MandelSet(Vec2<float> img_pos,
 {
 	dscr.img_size = img_size;
 	dscr.img_pos = img_pos;
-	render_engine = new RenderThreads<MandelSet>(4, this, CreateImgPart);
+	render_engine = new RenderThreads(4, this, CreateImgPart);
 	
 	iter_matrix = new unsigned*[img_size.x];
 	for (size_t i = 0; i < img_size.x; ++i)
@@ -119,6 +119,65 @@ MandelSet::~MandelSet()
 		delete[] iter_matrix[i];
 
 	delete[] iter_matrix;
+}
+
+void MandelSet::createGradientColorsTable()
+{
+	color_table.clear();
+	color_table.resize(dscr.number_of_iterations);
+
+	float delta_iter = static_cast<float>(color_table.size()) / 6.0f;
+
+	size_t max_iter1 = static_cast<size_t>(round(delta_iter * 1.0f));
+	size_t max_iter2 = static_cast<size_t>(round(delta_iter * 2.0f));
+	size_t max_iter3 = static_cast<size_t>(round(delta_iter * 3.0f));
+	size_t max_iter4 = static_cast<size_t>(round(delta_iter * 4.0f));
+	size_t max_iter5 = static_cast<size_t>(round(delta_iter * 5.0f));
+
+	color::ColorFloat delta(0.0f, 0.0f, 1.0f/delta_iter, 0.0f);
+
+	// r = const, b++
+	color_table[0] = { 1.f, 0.f, 0.f, 1.f };
+
+	for (size_t i = 1; i < max_iter1; ++i)
+		color_table[i] = color_table[i-1] + delta;
+
+
+	// b = const, r--
+	delta = { 1.f / delta_iter, 0.f, 0.f, 0.f };
+	color_table[max_iter1] = { 1.f, 0.f, 1.f, 1.f };
+
+	for (size_t i = max_iter1 + 1; i < max_iter2; ++i)
+		color_table[i] = color_table[i - 1] - delta;
+
+	// b = const, g++
+	delta = { 0.f, 1.f/delta_iter, 0.f, 0.f };
+	color_table[max_iter2] = { 0.f, 0.f, 1.f, 1.f };
+
+	for (size_t i = max_iter2 + 1; i < max_iter3; ++i)
+		color_table[i] = color_table[i - 1] + delta;
+
+	// g = const, b--
+	delta = { 0.f, 0.f, 1.f / delta_iter, 0.f };
+	color_table[max_iter3] = { 0.f, 1.f, 1.f, 1.f };
+
+	for (size_t i = max_iter3 + 1; i < max_iter4; ++i)
+		color_table[i] = color_table[i - 1] - delta;
+
+	// g = const, r++
+	delta = { 1.f / delta_iter, 0.f, 0.f, 0.f };
+	color_table[max_iter4] = { 0.f, 1.f, 0.f, 1.f };
+
+	for (size_t i = max_iter4 + 1; i < max_iter5; ++i)
+		color_table[i] = color_table[i - 1] + delta;
+
+	// r = const, g--
+	delta = { 0.f, 1.f / delta_iter,  0.f, 0.f };
+	color_table[max_iter5] = { 1.f, 1.f, 0.f, 1.f };
+
+	for (size_t i = max_iter5 + 1; i < color_table.size(); ++i)
+		color_table[i] = color_table[i - 1] - delta;
+
 }
 
 
