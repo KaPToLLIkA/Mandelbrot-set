@@ -1,0 +1,53 @@
+﻿  main.cpp
+  MandelSet.cpp
+  RenderThreads.cpp
+  RenderThreadsTemplates.cpp
+g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(238): error C2672: "std::invoke": не найдена соответствующая перегруженная функция
+  g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(246): note: выполняется компиляция ссылки на экземпляр шаблон функции "void std::_LaunchPad<_Target>::_Execute<0,1,2,3,4,5,6,7,8>(std::tuple<void (__cdecl *)(T *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),T *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<_Elem>>> *,bool *,bool *> &,std::integer_sequence<unsigned int,0,1,2,3,4,5,6,7,8>)"
+          with
+          [
+              _Target=std::unique_ptr<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>,std::default_delete<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>>>,
+              T=MandelSet,
+              _Elem=sf::Uint32
+          ]
+  g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(245): note: выполняется компиляция ссылки на экземпляр шаблон функции "void std::_LaunchPad<_Target>::_Execute<0,1,2,3,4,5,6,7,8>(std::tuple<void (__cdecl *)(T *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),T *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<_Elem>>> *,bool *,bool *> &,std::integer_sequence<unsigned int,0,1,2,3,4,5,6,7,8>)"
+          with
+          [
+              _Target=std::unique_ptr<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>,std::default_delete<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>>>,
+              T=MandelSet,
+              _Elem=sf::Uint32
+          ]
+  g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(242): note: при компиляции функции-члена "<Нет данных>" класса класс <Нет данных>
+  g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(230): note: выполняется компиляция ссылки на экземпляр шаблон функции "void std::_LaunchPad<_Target>::_Run(std::_LaunchPad<_Target> *) noexcept"
+          with
+          [
+              _Target=std::unique_ptr<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>,std::default_delete<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>>>
+          ]
+  g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(257): note: выполняется компиляция ссылки на экземпляр шаблон класс "std::_LaunchPad<_Target>"
+          with
+          [
+              _Target=std::unique_ptr<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>,std::default_delete<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>>>
+          ]
+  g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thread(46): note: выполняется компиляция ссылки на экземпляр шаблон функции "void std::_Launch<std::unique_ptr<std::tuple<void (__cdecl *)(T *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),T *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<_Elem>>> *,bool *,bool *>,std::default_delete<_Ty>>>(_Thrd_t *,_Target &&)"
+          with
+          [
+              T=MandelSet,
+              _Elem=sf::Uint32,
+              _Ty=std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>,
+              _Target=std::unique_ptr<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>,std::default_delete<std::tuple<void (__cdecl *)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,std::_Vb_reference<std::_Wrap_alloc<std::allocator<sf::Uint32>>> *,bool *,bool *>>>
+          ]
+  g:\source\mandelbrot_review\mandelbrot_review\renderthreads.cpp(45): note: выполняется компиляция ссылки на экземпляр шаблон функции "std::thread::thread<void(__cdecl &)(T *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *),T*&,_Ty&,_Ty&,std::mutex*&,std::condition_variable*&,std::_Vb_reference<std::_Wrap_alloc<std::allocator<_Elem>>>*,bool*,bool*,void>(_Fn,T *&,_Ty &,_Ty &,std::mutex *&,std::condition_variable *&,std::_Vb_reference<std::_Wrap_alloc<std::allocator<_Elem>>> *&&,bool *&&,bool *&&)"
+          with
+          [
+              T=MandelSet,
+              _Ty=std::mutex *,
+              _Elem=sf::Uint32,
+              _Fn=void (__cdecl &)(MandelSet *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *)
+          ]
+  g:\source\mandelbrot_review\mandelbrot_review\renderthreads.cpp(22): note: при компиляции функции-члена "<Нет данных>" класса класс <Нет данных>
+  g:\source\mandelbrot_review\mandelbrot_review\renderthreadstemplates.cpp(7): note: выполняется компиляция ссылки на экземпляр шаблон класс "RenderThreads<MandelSet>"
+g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(237): error C2893: Сбой при специализации функции-шаблона "unknown-type std::invoke(_Callable &&,_Types &&...) noexcept(<expr>)"
+  g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(237): note: Со следующими аргументами шаблона:
+  g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(237): note: "_Callable=void (__cdecl *)(T *,std::mutex *,std::mutex *,std::mutex *,std::condition_variable *,bool *,bool *,bool *)"
+  g:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\thr\xthread(237): note: "_Types={T *, std::mutex *, std::mutex *, std::mutex *, std::condition_variable *, std::_Vb_reference<std::_Wrap_alloc<std::allocator<_Elem>>> *, bool *, bool *}"
+  Создание кода...

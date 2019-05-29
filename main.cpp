@@ -1,13 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
-#include <sstream>
-#include <fstream>
 #include <future>
-#include <ctime>
-#include <array>
-#include <codecvt>
-#include <filesystem>
 
 #include "imgui.h"
 #include "imgui-SFML.h"
@@ -15,9 +9,7 @@
 #include "portable-file-dialogs.h"
 
 #include "MandelSet.h"
-#define IM_X 600
-#define IM_Y 800
-#define THREADS_COUNT 4
+#include "typedef.h"
 
 
 
@@ -27,19 +19,25 @@
 
 
 
-namespace params {
+
+
+
+namespace params 
+{
 
 	
-	sf::Vector2u	main_window_size = { IM_X, IM_Y },
-					settings_window_size = {400, IM_Y};
+	sf::Vector2u	menu_window_size = { 600, 800 };
 
-
-	bool settings_window_closed = true;
-	bool main_window_closed = false;
-	bool color_change = false;
-	bool frame_saved = false;
-	bool windows_magnet = false;
 	
+	bool opened_mandelbrot_window = false;
+	bool menu_window_closed = false;
+}
+
+namespace fractl 
+{
+	MandelSet *mandelbrot;
+
+
 }
 
 
@@ -49,110 +47,187 @@ namespace params {
 
 
 
+void MandelbrotView();
 
 
-
-sf::RenderWindow main_window(sf::VideoMode(params::main_window_size.x, params::main_window_size.y), " ", sf::Style::Default);
-sf::RenderWindow settings_window;
-
-
-MandelSet set({ 0,0 }, {IM_X, IM_Y});
 
 int main() 
 {
-	
-	main_window.setVerticalSyncEnabled(true);
-	main_window.setFramerateLimit(60);
-	//set.render_engine = new RenderThreads<MandelSet>(4, set, MandelSet::);
-
-
-	
-	
-
-
-	
-	sf::Clock deltaClock;
-	sf::Clock deltaRender;
-	deltaRender.restart();
-	while (main_window.isOpen()) 
+	Frame bg;
+	while (!params::menu_window_closed)
 	{
-		sf::Vector2i current_mouse_pos = {0,0};
-		
-		
+		sf::RenderWindow menu_window(sf::VideoMode(params::menu_window_size.x, params::menu_window_size.y), " ", sf::Style::Default);
+		menu_window.setVerticalSyncEnabled(true);
+		menu_window.setFramerateLimit(60);
+		ImGui::SFML::Init(menu_window, true);
+
+
+		sf::Clock deltaClock;
+		while (menu_window.isOpen())
 		{
+			
+
+
+			
 			sf::Event events_handler;
-		
-			current_mouse_pos = sf::Mouse::getPosition();
+
+			while (menu_window.pollEvent(events_handler))
+			{
+				ImGui::SFML::ProcessEvent(events_handler);
+				if (events_handler.type == sf::Event::Closed) params::menu_window_closed = true;
+				if (events_handler.type == sf::Event::Resized) menu_window.setSize(params::menu_window_size);
+
+				/*if (events_handler.type == sf::Event::MouseWheelMoved)
+					{
+
+						if (events_handler.mouseWheel.delta == -1)
+						{
+
+
+						}
+						else if (events_handler.mouseWheel.delta == 1)
+						{
 
 
 
 
 
+						}
+
+					}
+					if (events_handler.type == sf::Event::MouseButtonPressed)
+					{
 
 
-			while (main_window.pollEvent(events_handler))
+
+
+					}
+					if (events_handler.type == sf::Event::MouseButtonReleased)
+					{
+
+
+					}*/
+
+
+			}
+			ImGui::SFML::Update(menu_window, deltaClock.restart());
+			//menu section
+			{
+				ImGui::SetNextWindowPos({ 0.0f, 0.0f }, ImGuiCond_::ImGuiCond_FirstUseEver);
+				ImGui::Begin("Menu", nullptr, params::menu_window_size, 0.0f,
+					ImGuiWindowFlags_::ImGuiWindowFlags_NoBackground |
+					ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse |
+					ImGuiWindowFlags_::ImGuiWindowFlags_NoDecoration |
+					ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
+					ImGuiWindowFlags_::ImGuiWindowFlags_NoResize |
+					ImGuiWindowFlags_::ImGuiWindowFlags_NoTitleBar |
+					ImGuiWindowFlags_::ImGuiWindowFlags_NoSavedSettings);
+
+				
+				ImGui::SetCursorPos({ params::menu_window_size.x*0.3f, params::menu_window_size.y*0.4f });
+				if(ImGui::Button("Mandelbrot", { params::menu_window_size.x * 0.4f, 30.f }))
+				{
+					params::opened_mandelbrot_window = true;
+					auto f = std::async(MandelbrotView);
+				}
+
+				ImGui::SetCursorPos({ params::menu_window_size.x*0.3f, params::menu_window_size.y - 60.f });
+				if (ImGui::Button("Close", { params::menu_window_size.x * 0.4f, 30.f }))
+				{
+					params::menu_window_closed = true;
+				}
+
+				ImGui::End();
+			}
+			//end menu section
+			menu_window.clear();
+
+
+
+			ImGui::SFML::Render(menu_window);
+			menu_window.display();
+			if (params::menu_window_closed)
+			{
+				//saving settings
+
+				menu_window.close();
+			}
+
+
+		}
+	}
+
+	return 0;
+}
+
+
+void MandelbrotView()
+{
+	sf::RenderWindow window(sf::VideoMode(FRAME_MANDEL_X, FRAME_MANDEL_Y), " ", sf::Style::Default);
+
+	window.setVerticalSyncEnabled(true);
+	window.setFramerateLimit(60);
+	
+	while (window.isOpen())
+	{
+
+
+
+
+		sf::Event events_handler;
+
+		while (window.pollEvent(events_handler))
+		{
+			if (events_handler.type == sf::Event::Closed) params::opened_mandelbrot_window = false;
+			if (events_handler.type == sf::Event::Resized) window.setSize(params::menu_window_size);
+
+			if (events_handler.type == sf::Event::MouseWheelMoved)
 			{
 
-
-				if (events_handler.type == sf::Event::Closed) params::main_window_closed = true;
-				if (events_handler.type == sf::Event::Resized) main_window.setSize(params::main_window_size);
-
-
-				if (events_handler.type == sf::Event::MouseWheelMoved)
+				if (events_handler.mouseWheel.delta == -1)
 				{
-
-					if (events_handler.mouseWheel.delta == -1)
-					{
-						
-						
-					}
-					else if (events_handler.mouseWheel.delta == 1)
-					{
-
-						
-						
-
-
-					}
-
-				}
-				if (events_handler.type == sf::Event::MouseButtonPressed)
-				{
-
-					
 
 
 				}
-				if (events_handler.type == sf::Event::MouseButtonReleased)
+				else if (events_handler.mouseWheel.delta == 1)
 				{
 
-					
+
+
+
+
 				}
 
 			}
-		}
+			if (events_handler.type == sf::Event::MouseButtonPressed)
+			{
 
-		/*main_window.clear({	sf::Uint8((c1.r + c2.r + c3.r + c4.r) / 4),
-							sf::Uint8((c1.g + c2.g + c3.g + c4.g) / 4),
-							sf::Uint8((c1.b + c2.b + c3.b + c4.b) / 4),
-							sf::Uint8((c1.a + c2.a + c3.a + c4.a) / 4) });*/
-		main_window.clear();
+
+
+
+			}
+			if (events_handler.type == sf::Event::MouseButtonReleased)
+			{
+
+
+			}
+
+
+		}
 		
-		
-		main_window.display();
-		if (params::main_window_closed) 
+
+		window.clear();
+
+
+
+		window.display();
+		if (params::opened_mandelbrot_window)
 		{
 			//saving settings
-			
-			main_window.close();
+
+			window.close();
 		}
-	
+
 
 	}
-	
-	
-	
-	
-
-	return 0;
 }

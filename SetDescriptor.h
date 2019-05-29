@@ -1,14 +1,11 @@
 #pragma once
 #include <mutex>
+#include "typedef.h"
 
 namespace dscr {
 
 	// BASIC ELEMENTS SECTION
-	template <typename T> 
-	struct Vec2
-	{
-		T x, y;
-	};
+	
 
 	enum class ID
 	{
