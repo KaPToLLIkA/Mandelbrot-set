@@ -1,6 +1,7 @@
 #pragma once
 #include <mutex>
 #include "typedef.h"
+#include "SFML/System/Vector2.hpp"
 
 namespace dscr {
 
@@ -33,8 +34,8 @@ namespace dscr {
 		std::mutex changing;
 		std::mutex lock_next_xy;
 
-		Vec2<unsigned> img_size;
-		Vec2<float> img_pos;
+		sf::Vector2u img_size;
+		sf::Vector2f img_pos;
 
 		double	scale = 1.f,
 				radius = 8.f,

@@ -1,9 +1,10 @@
 #pragma once
 #include <complex>
+#include "SFML/System/Vector2.hpp"
 #include "Color.h"
 #include "SetDescriptor.h"
 #include "RenderThreads.h"
-#include "typedef.h"
+
 
 #define FRAME_MANDEL_X 800
 #define FRAME_MANDEL_Y 600
@@ -25,20 +26,15 @@ public:
 	MandelSet() = delete;
 
 
-	MandelSet(Vec2<float> img_pos, Vec2<unsigned> img_size);
+	MandelSet(sf::Vector2f img_pos, sf::Vector2u img_size, size_t number_of_threads);
 	~MandelSet();
 
 
 
 
-	friend void CreateImgPart(MandelSet* _this, 
-								std::mutex * pauser,
-								std::mutex * work_locker,
-								std::mutex * wait_restart,
-								std::condition_variable * alert,
-								bool * notified,
-								bool * exit,
-								bool * stop_render);
+	friend void CreateImgPartMandelbrot(MandelSet* _this,
+										RenderThreads *thr,
+										size_t idx);
 
 	void createGradientColorsTable();
 

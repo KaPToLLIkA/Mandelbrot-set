@@ -1,4 +1,3 @@
-#include <iostream>
 #include <thread>
 #include <mutex>
 #include <future>
@@ -11,8 +10,9 @@
 #include "MandelSet.h"
 #include "typedef.h"
 
-
-
+#ifdef DEBUG
+#include <iostream>
+#endif // DEBUG
 
 
 
@@ -139,10 +139,19 @@ int main()
 				ImGui::SetCursorPos({ params::menu_window_size.x*0.3f, params::menu_window_size.y*0.4f });
 				if(ImGui::Button("Mandelbrot", { params::menu_window_size.x * 0.4f, 30.f }))
 				{
+					fractl::mandelbrot = new MandelSet(
+						{ FRAME_MANDEL_X >> 1, FRAME_MANDEL_Y >> 1 },
+						{ FRAME_MANDEL_X, FRAME_MANDEL_Y }, 16
+					);
+
 					params::opened_mandelbrot_window = true;
 					params::menu_window_rolled = true;
 					params::new_thread = new std::thread(MandelbrotView);
 					params::new_thread->detach();
+
+					
+
+					fractl::mandelbrot->render_engine->StartAllThreads();
 				}
 
 				ImGui::SetCursorPos({ params::menu_window_size.x*0.3f, params::menu_window_size.y - 60.f });
@@ -241,6 +250,10 @@ void MandelbrotView()
 		{
 			params::menu_window_rolled = false;
 			params::notified = true;
+
+			fractl::mandelbrot->render_engine->DestroyThreads();
+			
+			delete fractl::mandelbrot;
 
 			window.close();
 		}

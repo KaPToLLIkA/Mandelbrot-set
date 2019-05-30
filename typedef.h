@@ -9,9 +9,3 @@ struct Frame
 	sf::Image	image;
 	sf::Sprite	sprite;
 };
-
-template <typename T>
-struct Vec2
-{
-	T x, y;
-};

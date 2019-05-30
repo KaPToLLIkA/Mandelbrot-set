@@ -41,32 +41,43 @@ double countDeltaMx_My(	int    last,
 }
 
 
-void CreateImgPart(MandelSet* _this, 
-					std::mutex * pauser,
-					std::mutex * work_locker,
-					std::mutex * wait_restart,
-					std::condition_variable * alert,
-					bool * notified,
-					bool * exit,
-					bool * stop_render)
+void CreateImgPartMandelbrot(MandelSet* _this, 
+							RenderThreads *thr,
+							size_t idx)
 {
+	thr->exit_locker[idx]->lock();
+#ifdef DEBUG
+	thr->safePrint(
+		std::string(
+			"[INF_MANDEL] Thread init idx = " + std::to_string(idx) + "\n"
+		)
+	);
+#endif // DEBUG
+
 	unsigned x = 0;
 	unsigned y = 0;
 	unsigned iteration = 0;
 
 	
-	while (!*exit)
+	while (!thr->exit)
 	{
-		std::unique_lock <std::mutex> locker(*wait_restart);
+		std::unique_lock <std::mutex> locker(thr->wait_restart);
 
-		while (!*notified) alert->wait(locker);
-		*notified = false;
+		while (!thr->notified[idx]) thr->alert.wait(locker);
+		thr->notified[idx] = false;
 
-		work_locker->lock();
-		while (x < _this->dscr.img_size.x - 1 && !*stop_render) 
+		thr->work_locker_target_thread[idx]->lock();
+#ifdef DEBUG
+		thr->safePrint(
+			std::string(
+				"[INF_MANDEL] Thread idx = " + std::to_string(idx) + " in work section...\n"
+			)
+		);
+#endif // DEBUG
+		while (x < _this->dscr.img_size.x - 1 && !thr->stop_render) 
 		{
-			pauser->lock();
-			pauser->unlock();
+			thr->pauser_target_thread[idx]->lock();
+			thr->pauser_target_thread[idx]->unlock();
 
 			_this->dscr.lock_next_xy.lock();
 			y = _this->dscr.next_y;
@@ -83,27 +94,53 @@ void CreateImgPart(MandelSet* _this,
 			}
 			_this->dscr.lock_next_xy.unlock();
 
+			if (x < _this->dscr.img_size.x - 1) break;
 
+			_this->dscr.changing.lock();
+
+			//calculating pixel
 			isInMandelbrotSet(std::complex <double>(0.0f, 0.0f),
-				&findComplex(x, y, _this->dscr.scale, _this->dscr.mx, _this->dscr.my), _this->dscr.radius, _this->dscr.number_of_iterations, &iteration);
-
+				&findComplex(x, y, 
+					_this->dscr.scale, 
+					_this->dscr.mx, 
+					_this->dscr.my), 
+				_this->dscr.radius, 
+				_this->dscr.number_of_iterations, 
+				&iteration);
+			
+			_this->dscr.changing.unlock();
 
 			_this->iter_matrix[x][y] = --iteration;
 
 			iteration = 0;
 
 		}
-		work_locker->unlock();
+		thr->work_locker_target_thread[idx]->unlock();
+#ifdef DEBUG
+		thr->safePrint(
+			std::string(
+				"[INF_MANDEL] Thread idx = " + std::to_string(idx) + " end work... \n"
+			)
+		);
+#endif // DEBUG
 	}
+#ifdef DEBUG
+	thr->safePrint(
+		std::string(
+			"[INF_MANDEL] Thread idx = " + std::to_string(idx) + " shutting down...\n"
+		)
+	);
+#endif // DEBUG
+	thr->exit_locker[idx]->unlock();
 }
 
 
-MandelSet::MandelSet(Vec2<float> img_pos, 
-					 Vec2<unsigned> img_size)
+MandelSet::MandelSet(sf::Vector2f img_pos, sf::Vector2u img_size, 
+	size_t number_of_threads)
 {
 	dscr.img_size = img_size;
 	dscr.img_pos = img_pos;
-	render_engine = new RenderThreads(4, this, CreateImgPart);
+	render_engine = new RenderThreads(number_of_threads, this, CreateImgPartMandelbrot);
 	
 	iter_matrix = new unsigned*[img_size.x];
 	for (size_t i = 0; i < img_size.x; ++i)
