@@ -3,12 +3,16 @@ This is a visualization of the Mandelbrot set.
 
 Each pixel on the screen is a point of the complex plane. It is checked by the algorithm for belonging to the set and painted in a certain color, depending on the belonging to the set.
 
-![image](https://dik.academic.ru/pictures/wiki/files/77/Mandel_zoom_07_satellite.jpg "Множество Мандельброта")
 
 
 # Demonstration of work 
 
-empty, will added later
+![image](https://github.com/KaPToLLIkA/Mandelbrot-set/blob/SFML-version_2/demo/Mon%20Apr%2022%2017.33.40%202019.jpg "dem1")
+![image](https://github.com/KaPToLLIkA/Mandelbrot-set/blob/SFML-version_2/demo/Tue%20Apr%2023%2011.52.58%202019.jpg "dem1")
+![image](https://github.com/KaPToLLIkA/Mandelbrot-set/blob/SFML-version_2/demo/Mon%20Apr%2022%2017.28.25%202019.jpg "dem1")
+![image](https://github.com/KaPToLLIkA/Mandelbrot-set/blob/SFML-version_2/demo/Mon%20Apr%2022%2017.29.00%202019.jpg "dem1")
+![image](https://github.com/KaPToLLIkA/Mandelbrot-set/blob/SFML-version_2/demo/Tue%20Apr%2023%2012.33.59%202019.jpg "dem1")
+***
 
 
 # How to build a project
