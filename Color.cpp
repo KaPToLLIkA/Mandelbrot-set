@@ -2,6 +2,7 @@
 
 namespace color {
 
+	////////////////////////////////////////////////////////////////////////////
 	ColorFloat operator+(const ColorFloat &l, const ColorFloat &r)
 	{
 		
@@ -13,6 +14,7 @@ namespace color {
 		);
 	}
 
+	////////////////////////////////////////////////////////////////////////////
 	ColorFloat operator-(const ColorFloat &l, const ColorFloat &r)
 	{
 		return ColorFloat(
@@ -23,6 +25,7 @@ namespace color {
 		);
 	}
 
+	////////////////////////////////////////////////////////////////////////////
 	ColorFloat operator*(const ColorFloat &l, float k)
 	{
 		ColorFloat x(l.r * k, l.g * k, l.b * k, l.a * k);
@@ -35,6 +38,7 @@ namespace color {
 		return x;
 	}
 
+	////////////////////////////////////////////////////////////////////////////
 	const ColorFloat & ColorFloat::operator+=(const ColorFloat &arg)
 	{
 		this->r += arg.r;
@@ -50,6 +54,7 @@ namespace color {
 		return *this;
 	}
 
+	////////////////////////////////////////////////////////////////////////////
 	const ColorFloat & ColorFloat::operator-=(const ColorFloat &arg)
 	{
 		this->r -= arg.r;
@@ -65,6 +70,7 @@ namespace color {
 		return *this;
 	}
 
+	////////////////////////////////////////////////////////////////////////////
 	const ColorFloat & ColorFloat::operator=(const ColorFloat &arg)
 	{
 		this->r = arg.r;
@@ -73,6 +79,15 @@ namespace color {
 		this->a = arg.a;
 		
 		return *this;
+	}
+
+	ColorFloat::operator sf::Color()
+	{
+		return sf::Color(
+			sf::Uint8(255 * r),
+			sf::Uint8(255 * g),
+			sf::Uint8(255 * b),
+			sf::Uint8(255 * a));
 	}
 
 } //end of color namespace

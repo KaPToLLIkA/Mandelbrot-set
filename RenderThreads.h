@@ -26,11 +26,9 @@ private:
 	}
 #endif // DEBUG
 
+	bool exit             = false;
+	bool stop_render      = false;
 
-	bool exit        = false;
-	bool stop_render = false;
-	
-	
 	std::vector <std::mutex*>  work_locker_target_thread;
 	std::vector <std::mutex*>  pauser_target_thread;
 	std::vector <std::mutex*>  exit_locker;
@@ -43,23 +41,30 @@ private:
 	size_t number_of_threads = 0;
 public:
 	
-	RenderThreads(const RenderThreads&) = delete;
+	RenderThreads(const RenderThreads&)            = delete;
 	RenderThreads& operator=(const RenderThreads&) = delete;
 
 
-	RenderThreads();
+	explicit RenderThreads();
+
+	
 	template <class T>
-	RenderThreads(size_t number_of_threads,
-					T* obj,
-					void(*thr_funct)(T * obj,
-									RenderThreads * thr,
-									size_t idx));
+	explicit RenderThreads(
+		size_t   number_of_threads,
+		T      * obj,
+		void(*thr_funct)(
+			T             * obj,
+			RenderThreads * thr,
+			size_t          idx));
+
 	template <class T>
-	void CreateThreads(size_t number_of_threads,
-						T* obj,
-						void(*thr_funct)(T * obj,
-										RenderThreads * thr,
-										size_t idx));
+	void CreateThreads(
+		size_t   number_of_threads,
+		T      * obj,
+		void(*thr_funct)(
+			T             * obj,
+			RenderThreads * thr,
+			size_t          idx));
 	
 	void WaitEndOfWorkFromAllThrds();
 	void WaitEndOfWorkFromConcreteThr(int idx);
@@ -81,9 +86,22 @@ public:
 	void DestroyThreads();
 	
 
-	friend void CreateImgPartMandelbrot(MandelSet* _this,
+
+
+	//START OF SECTION
+	//all threads functiuons
+
+	friend void CreateImgPartMandelbrot(
+		MandelSet     *_this,
 		RenderThreads *thr,
-		size_t idx);
+		size_t         idx);
+
+	friend void UpdateColorMandelbrot(
+		MandelSet	   *_this,
+		RenderThreads  *thr,
+		size_t			idx);
+
+	//END OF SECTION
 
 
 
@@ -101,11 +119,12 @@ public:
 
 template<class T>
 inline RenderThreads::RenderThreads(
-	size_t number_of_threads,
-	T* obj,
-	void(*thr_funct)(T * obj,
-					RenderThreads * thr,
-					size_t idx)) :
+	size_t   number_of_threads,
+	T      * obj,
+	void(*thr_funct)(
+		T             * obj,
+		RenderThreads * thr,
+		size_t          idx)) :
 	number_of_threads(number_of_threads),
 	notified(std::vector <bool>(number_of_threads, false))
 {
@@ -126,11 +145,12 @@ inline RenderThreads::RenderThreads(
 
 template<class T>
 inline void RenderThreads::CreateThreads(
-	size_t number_of_threads,
-	T * obj,
-	void(*thr_funct)(T * obj,
-					RenderThreads * thr,
-					size_t idx))
+	size_t   number_of_threads,
+	T      * obj,
+	void(*thr_funct)(
+		T             * obj,
+		RenderThreads * thr,
+		size_t          idx))
 {
 
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "SFML/Graphics/Color.hpp"
 
 namespace color {
 
@@ -34,6 +35,18 @@ namespace color {
 
 		}
 	};
+
+	
+
+
+
+
+
+
+
+
+
+
 
 
 	class ColorFloat
@@ -80,11 +93,15 @@ namespace color {
 
 		const ColorFloat& operator=(const ColorFloat&);
 
+		operator sf::Color();
+		
+
 		virtual ~ColorFloat()
 		{
 
 		}
 
 	};
+
 } //end of color namespace
 

@@ -33,6 +33,7 @@ namespace dscr {
 	public:
 		std::mutex changing;
 		std::mutex lock_next_xy;
+		std::mutex lock_next_xy_colors;
 
 		sf::Vector2u img_size;
 		sf::Vector2f img_pos;
@@ -46,10 +47,12 @@ namespace dscr {
 
 
 		unsigned	number_of_color_points = 4,
-					number_of_iterations = number_of_color_points * 12,
+					number_of_iterations = 512,
 					number_of_render_threads = 1,
 					next_x = 0,
-					next_y = 0;
+					next_y = 0, 
+					next_x_colors = 0,
+					next_y_colors = 0;
 
 		Mandelbrot_dscr() {}
 		~Mandelbrot_dscr() {}
