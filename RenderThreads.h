@@ -28,6 +28,7 @@ private:
 
 	bool exit             = false;
 	bool stop_render      = false;
+	std::vector<bool>          render_status;
 
 	std::vector <std::mutex*>  work_locker_target_thread;
 	std::vector <std::mutex*>  pauser_target_thread;
@@ -39,6 +40,8 @@ private:
 	std::vector <std::thread*> threads;
 
 	size_t number_of_threads = 0;
+
+	bool CheckIDX(int &idx);
 public:
 	
 	RenderThreads(const RenderThreads&)            = delete;
@@ -82,6 +85,8 @@ public:
 	void SetPauseConcreteThread(int idx);
 	void UnsetPauseConcreteThread(int idx);
 
+	bool CheckStatusFromAll();
+	bool CheckStatusFromConcrete(int idx);
 
 	void DestroyThreads();
 	
@@ -126,7 +131,8 @@ inline RenderThreads::RenderThreads(
 		RenderThreads * thr,
 		size_t          idx)) :
 	number_of_threads(number_of_threads),
-	notified(std::vector <bool>(number_of_threads, false))
+	notified(std::vector <bool>(number_of_threads, false)),
+	render_status(std::vector <bool>(number_of_threads, true))
 {
 	
 
@@ -156,6 +162,7 @@ inline void RenderThreads::CreateThreads(
 
 	this->number_of_threads = number_of_threads;
 	notified = std::vector <bool>(number_of_threads, false);
+	render_status = (std::vector <bool>(number_of_threads, true));
 	exit = false;
 	stop_render = false;
 

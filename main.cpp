@@ -9,6 +9,8 @@
 
 #include "MandelSet.h"
 #include "typedef.h"
+#include "utils_main.h"
+#include "windows.h"
 
 #ifdef DEBUG
 #include "time_test.h"
@@ -31,10 +33,13 @@ namespace params
 
 
 	std::mutex lock_menu;
-	bool notified = true;
+	bool menu_notified            = true;
 	bool opened_mandelbrot_window = false;
-	bool menu_window_closed = false;
-	bool menu_window_rolled = false;
+	bool menu_window_closed       = false;
+	bool menu_window_rolled       = false;
+
+
+	sf::Font font;
 }
 
 namespace fractl 
@@ -57,23 +62,27 @@ void MandelbrotView();
 
 int main() 
 {
-	Frame bg;
+	params::font.loadFromFile("data\\monof55.ttf");
+	
+
+
+	GE background;
 	while (!params::menu_window_closed)
 	{
-		while (!params::notified)
+		while (!params::menu_notified)
 		{
 			params::lock_menu.lock();
 			params::lock_menu.unlock();
 		}
-		params::notified = false;
+		params::menu_notified = false;
 		delete params::new_thread;
 
 
 		sf::RenderWindow menu_window(sf::VideoMode(params::menu_window_size.x, params::menu_window_size.y), " ", sf::Style::Default);
 		menu_window.setVerticalSyncEnabled(true);
 		menu_window.setFramerateLimit(60);
-		ImGui::SFML::Init(menu_window, true);
-
+		ImGui::SFML::Init(menu_window, false);
+		LoadCustomFont();
 
 		sf::Clock deltaClock;
 		while (menu_window.isOpen())
@@ -92,8 +101,10 @@ int main()
 
 			}
 			ImGui::SFML::Update(menu_window, deltaClock.restart());
+			
 			//menu section
 			{
+				ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[FontT::middle]);
 				ImGui::SetNextWindowPos({ 0.0f, 0.0f }, ImGuiCond_::ImGuiCond_FirstUseEver);
 				ImGui::Begin("Menu", nullptr, params::menu_window_size, 0.0f,
 					ImGuiWindowFlags_::ImGuiWindowFlags_NoBackground |
@@ -131,6 +142,8 @@ int main()
 				}
 
 				ImGui::End();
+				
+				ImGui::PopFont();
 			}
 			//end menu section
 			menu_window.clear();
@@ -157,13 +170,42 @@ int main()
 
 void MandelbrotView()
 {
-	bool restart_render = false;
 	params::lock_menu.lock();
-	sf::RenderWindow window(sf::VideoMode(FRAME_MANDEL_X, FRAME_MANDEL_Y), " ", sf::Style::Default);
 
+
+	std::string scale_str    = "scale: " + std::to_string(fractl::mandelbrot->getScale());
+	std::string iter_num_str = "iterations: " + std::to_string(fractl::mandelbrot->getNumberOfIterations());
+	bool restart_render       = false;
+	bool mouse_button_pressed = false;
+
+	sf::Vector2i last_mouse_pos;
+	sf::Vector2i cur_mouse_pos;
+
+	sf::RenderWindow window(sf::VideoMode(FRAME_MANDEL_X, FRAME_MANDEL_Y), " ", sf::Style::Default);
 	window.setVerticalSyncEnabled(true);
 	window.setFramerateLimit(60);
 	
+	//SECTION "GRAPHIC ELEMENTS INITIALIZATION"
+	GE center("data\\textures\\center.png");
+	center.sprite.setOrigin(10.f, 10.f);
+	center.sprite.setPosition(
+		{ 
+			static_cast<float>(FRAME_MANDEL_X >> 1), 
+			static_cast<float>(FRAME_MANDEL_Y >> 1)
+		}
+	);
+	//END OF SECTION "GRAPHIC ELEMENTS INITIALIZATION"
+	
+	
+	auto ret_val = std::async(
+		std::launch::async,
+		MandelSettingsWindow,
+		&window,
+		fractl::mandelbrot,
+		&params::opened_mandelbrot_window,
+		std::ref(params::font)
+	);
+
 	while (window.isOpen())
 	{
 
@@ -171,11 +213,12 @@ void MandelbrotView()
 
 
 		sf::Event events_handler;
+		cur_mouse_pos = sf::Mouse::getPosition();
 
 		while (window.pollEvent(events_handler))
 		{
 			if (events_handler.type == sf::Event::Closed) params::opened_mandelbrot_window = false;
-			if (events_handler.type == sf::Event::Resized) window.setSize(params::menu_window_size);
+			if (events_handler.type == sf::Event::Resized) window.setSize({FRAME_MANDEL_X, FRAME_MANDEL_Y});
 
 			if (events_handler.type == sf::Event::MouseWheelMoved)
 			{
@@ -183,27 +226,32 @@ void MandelbrotView()
 				if (events_handler.mouseWheel.delta == -1)
 				{
 					fractl::mandelbrot->ZoomIncrease();
+					scale_str = "scale: " + std::to_string(fractl::mandelbrot->getScale());
 					restart_render = true;
 
 				}
 				else if (events_handler.mouseWheel.delta == 1)
 				{
 					fractl::mandelbrot->ZoomDecrease();
+					scale_str = "scale: " + std::to_string(fractl::mandelbrot->getScale());
 					restart_render = true;
 				}
 
 			}
 			if (events_handler.type == sf::Event::MouseButtonPressed)
 			{
-
-
-
+				mouse_button_pressed = true;
+				last_mouse_pos = cur_mouse_pos;
+				std::async(std::launch::async, &MandelSet::StopRenderer, fractl::mandelbrot);
 
 			}
 			if (events_handler.type == sf::Event::MouseButtonReleased)
 			{
-
-
+				mouse_button_pressed = false;
+				fractl::mandelbrot->current_frame.sprite.setPosition(
+					{FRAME_MANDEL_X >> 1, FRAME_MANDEL_Y >> 1});
+				std::async(std::launch::async, &MandelSet::StartRenderer, fractl::mandelbrot);
+				
 			}
 
 
@@ -213,28 +261,39 @@ void MandelbrotView()
 			std::async(std::launch::async, &MandelSet::RestartRenderer, fractl::mandelbrot);
 			restart_render = false;
 		}
+		if (mouse_button_pressed)
+		{
+			fractl::mandelbrot->Update_delta_Mx_My(last_mouse_pos, cur_mouse_pos);
+		}
+		else
+		{
 
-		
+			fractl::mandelbrot->current_frame.locker.lock();
+			fractl::mandelbrot->current_frame.texture.loadFromImage(
+				fractl::mandelbrot->current_frame.image
+			);
+			fractl::mandelbrot->current_frame.locker.unlock();
 
-		fractl::mandelbrot->current_frame.locker.lock();
-		fractl::mandelbrot->current_frame.texture.loadFromImage(
-			fractl::mandelbrot->current_frame.image
-		);
-		fractl::mandelbrot->current_frame.locker.unlock();
-		
-		fractl::mandelbrot->current_frame.sprite.setTexture(
-			fractl::mandelbrot->current_frame.texture
-		);
+			fractl::mandelbrot->current_frame.sprite.setTexture(
+				fractl::mandelbrot->current_frame.texture
+			);
+		}
+
+
 
 		window.clear();
 		window.draw(fractl::mandelbrot->current_frame.sprite);
-
+		window.draw(showBoldText20(&scale_str, { static_cast<float>(FRAME_MANDEL_X >> 1), 5.f }, params::font));
+		window.draw(showBoldText20(&iter_num_str, {5.f, 5.f}, params::font));
+		window.draw(center.sprite);
 
 		window.display();
+
+		
 		if (!params::opened_mandelbrot_window)
 		{
 			params::menu_window_rolled = false;
-			params::notified = true;
+			params::menu_notified = true;
 
 			fractl::mandelbrot->DestroyRenderer();
 			delete fractl::mandelbrot;
@@ -242,7 +301,10 @@ void MandelbrotView()
 			window.close();
 		}
 
-
+		last_mouse_pos = cur_mouse_pos;
 	}
 	params::lock_menu.unlock();
+	ret_val.wait();
 }
+
+

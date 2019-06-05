@@ -2,6 +2,11 @@
 
 
 
+bool RenderThreads::CheckIDX(int &idx)
+{
+	return (idx < static_cast<int>(number_of_threads) && idx >= 0);
+}
+
 ////////////////////////////////////////////////////////////////////////////
 RenderThreads::RenderThreads()
 {
@@ -19,7 +24,7 @@ void RenderThreads::WaitEndOfWorkFromAllThrds()
 ////////////////////////////////////////////////////////////////////////////
 void RenderThreads::WaitEndOfWorkFromConcreteThr(int idx)
 {
-	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
+	if (CheckIDX(idx))
 	{
 		work_locker_target_thread[idx]->lock();
 		work_locker_target_thread[idx]->unlock();
@@ -39,7 +44,7 @@ void RenderThreads::WaitExitFromAllThreads()
 ////////////////////////////////////////////////////////////////////////////
 void RenderThreads::WaitExitFromConcreteThread(int idx)
 {
-	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
+	if (CheckIDX(idx))
 	{
 		exit_locker[idx]->lock();
 		exit_locker[idx]->unlock();
@@ -72,7 +77,7 @@ void RenderThreads::StopAllThreads()
 ////////////////////////////////////////////////////////////////////////////
 void RenderThreads::StartConcreteThread(int idx)
 {
-	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
+	if (CheckIDX(idx))
 	{
 		WaitEndOfWorkFromConcreteThr(idx);
 
@@ -86,7 +91,7 @@ void RenderThreads::StartConcreteThread(int idx)
 ////////////////////////////////////////////////////////////////////////////
 void RenderThreads::StopConcreteThread(int idx)
 {
-	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
+	if (CheckIDX(idx))
 	{
 		stop_render = true;
 		WaitEndOfWorkFromConcreteThr(idx);
@@ -111,15 +116,32 @@ void RenderThreads::UnsetPauseAllThreads()
 ////////////////////////////////////////////////////////////////////////////
 void RenderThreads::SetPauseConcreteThread(int idx)
 {
-	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
+	if (CheckIDX(idx))
 		pauser_target_thread[idx]->lock();
 }
 
 ////////////////////////////////////////////////////////////////////////////
 void RenderThreads::UnsetPauseConcreteThread(int idx)
 {
-	if (idx < static_cast<int>(number_of_threads) && idx >= 0)
+	if (CheckIDX(idx))
 		pauser_target_thread[idx]->unlock();
+}
+
+bool RenderThreads::CheckStatusFromAll()
+{
+	bool all_ended = true;
+	for (auto ended : render_status)
+		if (!ended) all_ended = false;
+	return all_ended;
+}
+
+bool RenderThreads::CheckStatusFromConcrete(int idx)
+{
+	if (CheckIDX(idx))
+	{
+		return render_status[idx];
+	}
+	return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -135,6 +157,7 @@ void RenderThreads::DestroyThreads()
 	pauser_target_thread.clear();
 	threads.clear();
 	notified.clear();
+	render_status.clear();
 	stop_render = false;
 }
 

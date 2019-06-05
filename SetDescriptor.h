@@ -47,7 +47,7 @@ namespace dscr {
 
 
 		unsigned	number_of_color_points = 4,
-					number_of_iterations = 512,
+					number_of_iterations = 128,
 					number_of_render_threads = 1,
 					next_x = 0,
 					next_y = 0, 
